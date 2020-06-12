@@ -11,20 +11,17 @@ const App = () => {
   const MediumBallOrbit = new THREE.Object3D();
   const camera = new THREE.PerspectiveCamera( 100, window.innerWidth / window.innerHeight, 0.01, 10000 );
   const light = new THREE.DirectionalLight(0xFFFFFF, 1);
-  const geometryCube = new THREE.BoxBufferGeometry( 60, 60, 60 );
+  const geometryCube = new THREE.BoxBufferGeometry( 160, 160, 160 );
   const geometryBall = new THREE.SphereBufferGeometry( 40, 20, 10 );
   const planeGeometry = new THREE.BoxBufferGeometry( 100, 150, 0);
   const firstBall = new THREE.SphereBufferGeometry(20, 20, 20);
   const secondBall = new THREE.SphereBufferGeometry(40, 40, 40);
   const thirdBall = new THREE.SphereBufferGeometry(80, 80, 80);
-  const loader = new THREE.FontLoader();
+  const textLoader = new THREE.FontLoader();
+  const texturesLoader = new THREE.TextureLoader();
 
-  loader.load('./font_ubuntu.json', (val) => {
-    console.log(val)
-    font = val;
-  });
   const textGeometry = new THREE.TextBufferGeometry('Hello World', {
-    font: font, 
+    font: textLoader.load('./font_ubuntu.json'), 
     size: 500,
     height: 450,
     curveSegments: 320,
@@ -46,12 +43,12 @@ const App = () => {
   }
 
   const generateColor = () => {
-    const material = new THREE.MeshPhongMaterial();
+    const material = new THREE.MeshPhongMaterial({shininess: 100});
 
-    const hue = Math.random();
-    const saturation = 1;
-    const luminance = 0.5;
-    material.color.setHSL(hue, saturation, luminance);
+    const h = Math.random();
+    const s = 1;
+    const l = 0.5;
+    material.color.setHSL(h, s, l);
 
     return material;
   }
@@ -64,17 +61,39 @@ const App = () => {
     return figure;
   }
 
-  const createFigure = (geometry, positionX) => {
-    const figure = new THREE.Mesh( geometry, generateColor() );
+  const createFigure = (geometry, positionX, textures) => {
+    let material;
+    if (textures === 'list') {
+      material = new THREE.MeshBasicMaterial({
+        map: texturesLoader.load('https://sun9-62.userapi.com/c858524/v858524417/af57f/FWDhwH0unuY.jpg'),
+      })
+    }
+    if (textures === 'cube') {
+      material = [
+        new THREE.MeshBasicMaterial({map: texturesLoader.load('https://sun1.beltelecom-by-minsk.userapi.com/MX7mQhAFmuDsr80KdW1rQpVtvu4Yp0YMTBpdHg/YZJYw4zQ_QE.jpg')}),
+        new THREE.MeshBasicMaterial({map: texturesLoader.load('https://sun1.beltelecom-by-minsk.userapi.com/EOdGSI41514IhsLCqyUnpr56z9PUG-4p8nTstg/pvhZB4u2SN8.jpg')}),
+        new THREE.MeshBasicMaterial({map: texturesLoader.load('https://sun1.beltelecom-by-minsk.userapi.com/Ww8dAQOjhGVBLAdDJr3PtcquAsjQlzO_0fLX9A/jrueCNpvVUs.jpg')}),
+        new THREE.MeshBasicMaterial({map: texturesLoader.load('https://sun2.beltelecom-by-minsk.userapi.com/mQjuiW3Aa2-suXZ2GP8ydZ0hhWWf_0xYT2mkrw/XlYfqfM15hs.jpg')}),
+        new THREE.MeshBasicMaterial({map: texturesLoader.load('https://sun1.beltelecom-by-minsk.userapi.com/NbR1uak6fCdOmZQ18Hh1vFZqlPoYx4FHDZvM7Q/2JlHQnP0ejE.jpg')}),
+        new THREE.MeshBasicMaterial({map: texturesLoader.load('https://sun1.beltelecom-by-minsk.userapi.com/FZ53O_SnppsoLbbaDA14CuRxxzb-D5sBJgQzoQ/6A0aSf-z4pk.jpg')}),
+      ]
+    }
+    
+    const figure = new THREE.Mesh( geometry, textures ? material : generateColor() );
 
     scene.add(figure);
     figure.position.x = positionX;
     return figure;
   };
 
-  const cube = createFigure(geometryCube, 0);
+  const animeBall = new THREE.Mesh(thirdBall, new THREE.MeshToonMaterial({color: 'yellow'}));
+  animeBall.position.x = -500;
+  animeBall.position.y = 100;
+  animeBall.rotation.y = 5;
+
+  const cube = createFigure(geometryCube, 0, 'cube');
   const ball = createFigure(geometryBall, 150);
-  const list = createFigure(planeGeometry, 300);
+  const list = createFigure(planeGeometry, 300, 'list');
   const text = createFigure(textGeometry, -150);
   const smallBall = createBalls(firstBall, 50, 100);
   const mediumBall = createBalls(secondBall, 200, 250);
@@ -88,17 +107,19 @@ const App = () => {
 
   const init = () => {
     
-    camera.position.set(800, -600, 300);
+    camera.position.set(0, -200, 700);
 
     light.position.set(100, 200, 1000);
 
     scene.add(light);
     scene.add(font);
     scene.add(BigBallOrbit);
+    scene.add(animeBall);
     BigBallOrbit.add(bigBall);
     BigBallOrbit.add(MediumBallOrbit);
     MediumBallOrbit.add(mediumBall);
     mediumBall.add(smallBall);
+    list.add(ball);
 
     renderer.setSize( window.innerWidth, window.innerHeight );
     document.body.appendChild( renderer.domElement );
@@ -123,7 +144,7 @@ const App = () => {
     // camera.position.x = Math.cos(angle) * radius;
     // camera.position.z = Math.sin(angle) * radius;
     angle += angSpeed * delta;
-    // camera.lookAt(cube.position);
+    camera.lookAt(bigBall.position);
     
     renderer.render( scene, camera );
   }
