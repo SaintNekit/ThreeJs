@@ -7,7 +7,9 @@ import earthTextures from '../assets/2_no_clouds_4k.jpg';
 import earthHiils from '../assets/elev_bump_4k.jpg';
 import earthWater from '../assets/water_4k.png';
 import earthClouds from '../assets/fair_clouds_4k.png';
-import sunMat from '../assets/sun.jpg';
+import sunTextures from '../assets/sun.jpg';
+import moonTextures from '../assets/moon_1024.jpg';
+import moonCrators from '../assets/4k_ceres_fictional.jpg';
 
 const SolarSystem = () => {
   const scene = new THREE.Scene();
@@ -16,8 +18,9 @@ const SolarSystem = () => {
   const texturesLoader = new THREE.TextureLoader();
   const light = new THREE.PointLight(0xffffff, 1);
   const ambLight = new THREE.AmbientLight(0x333333);
-  const sunOrbit = new THREE.Object3D();
   const earthOrbit = new THREE.Object3D();
+  let earthAngle = 0;
+  let moonAngle = 0;
 
   const earthGeometry = new THREE.SphereGeometry(0.1, 32, 32);
   const earthMaterial = new THREE.MeshPhongMaterial({
@@ -40,15 +43,25 @@ const SolarSystem = () => {
     transparent: true,
   });
 
-  const sunGeometry = new THREE.SphereGeometry(1, 30, 30);
+  const sunGeometry = new THREE.SphereGeometry(1, 50, 50);
   const sunMaterial = new THREE.MeshBasicMaterial({
-    map: texturesLoader.load(sunMat),
+    map: texturesLoader.load(sunTextures),
+    // side: THREE.DoubleSide,
   });
+
+  const moonGeometry = new THREE.SphereGeometry(0.05, 30, 30);
+  const moonMaterial = new THREE.MeshPhongMaterial({
+    map: texturesLoader.load(moonTextures),
+    bumpMap: texturesLoader.load(moonCrators),
+    shininess: 40,
+    bumpScale: 0.002,
+  })
   
   const sun = createMesh(sunGeometry, sunMaterial);
   const earth = createMesh(earthGeometry, earthMaterial);
   const stars = createMesh(starsGeometry, starsMaterial);
   const clouds = createMesh(cloudsGeometry, cloudsMaterial);
+  const moon = createMesh(moonGeometry, moonMaterial);
 
   const setOrbitControls = () => {
     const controls = new OrbitControls( camera, renderer.domElement );
@@ -56,22 +69,18 @@ const SolarSystem = () => {
   }
 
   const init = () => {
-    camera.position.z = 10;
+    camera.position.z = 7;
     sun.position.x = 0;
     light.position.x = 0;
-    earth.position.x = 2;
-    clouds.position.x = 2;
 
-    // light.position.set(2, 0, 0);
-
-    scene.add(ambLight);
+    // scene.add(ambLight);
     scene.add(light);
     scene.add(stars);
-    scene.add(sunOrbit);
-    sunOrbit.add(earthOrbit);
-    sunOrbit.add(sun);
+    scene.add(sun);
+    scene.add(earthOrbit);
     earthOrbit.add(earth);
     earthOrbit.add(clouds);
+    earthOrbit.add(moon);
 
     renderer.setSize( window.innerWidth, window.innerHeight );
     document.body.appendChild(renderer.domElement);
@@ -79,14 +88,20 @@ const SolarSystem = () => {
   };
 
   const animate = () => {
-    earth.rotation.y += 0.005;
-    clouds.rotation.y += 0.006;
-    clouds.rotation.x += 0.0009;
-    // earthOrbit.rotation.y += 0.01;
-    sunOrbit.rotation.y += 0.01;
-    sun.rotation.x +=0.005;
+    earth.rotateOnAxis(new THREE.Vector3(0.5, 1, 0).normalize(), 0.01);
+    clouds.rotateOnAxis(new THREE.Vector3(0.5, 1, -0.5).normalize(), 0.02);
+    // moon.rotateOnAxis(new THREE.Vector3(0.5, 0, 0).normalize(), 0.005);
+    sun.rotateOnAxis(new THREE.Vector3(0, 0.3, -0.5).normalize(), 0.01);
 
-    // camera.lookAt(sun.position);
+    earthAngle += 0.015 * (75 * (Math.PI / 360));
+    moonAngle += 0.04 * (75 * (Math.PI / 360));
+
+    earthOrbit.position.x = Math.sin(earthAngle) * 2;
+    earthOrbit.position.z = Math.cos(earthAngle) * 2;
+    moon.position.y = Math.cos(moonAngle) * 0.3;
+    moon.position.z = Math.sin(moonAngle) * 0.3;
+
+    moon.lookAt(earthOrbit.position);
 
     requestAnimationFrame( animate );
     renderer.render( scene, camera );
