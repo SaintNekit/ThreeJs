@@ -1,67 +1,35 @@
 import React from 'react';
 import * as THREE from 'three';
-import { createMesh } from '../utils/helpers';
+import { removeLights, createEarth, createClouds, createStars, createSun, createMoon } from '../utils/helpers';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import starsBackground from '../assets/galaxy_starfield.png';
-import earthTextures from '../assets/2_no_clouds_4k.jpg';
-import earthHiils from '../assets/elev_bump_4k.jpg';
-import earthWater from '../assets/water_4k.png';
-import earthClouds from '../assets/fair_clouds_4k.png';
-import sunTextures from '../assets/sun.jpg';
-import moonTextures from '../assets/moon_1024.jpg';
-import moonCrators from '../assets/4k_ceres_fictional.jpg';
+import { TweenMax, TimelineMax } from 'gsap';
 
 const SolarSystem = () => {
+  let display = true;
+  let reverse = false;
+
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.01, 10000 );
   const renderer = new THREE.WebGLRenderer( { antialias: true });
-  const texturesLoader = new THREE.TextureLoader();
   const light = new THREE.PointLight(0xffffff, 1);
   const ambLight = new THREE.AmbientLight(0x333333);
   const earthOrbit = new THREE.Object3D();
   let earthAngle = 0;
   let moonAngle = 0;
-
-  const earthGeometry = new THREE.SphereGeometry(0.1, 32, 32);
-  const earthMaterial = new THREE.MeshPhongMaterial({
-    map: texturesLoader.load(earthTextures),
-    bumpMap: texturesLoader.load(earthHiils),
-    bumpScale: 0.005,
-    specularMap: texturesLoader.load(earthWater),
-    specular: new THREE.Color('gray'),
-  });
-
-  const starsGeometry = new THREE.SphereGeometry(90, 64, 64);
-  const starsMaterial = new THREE.MeshPhongMaterial({
-    map: texturesLoader.load(starsBackground),
-    side: THREE.BackSide,
-  });
-
-  const cloudsGeometry = new THREE.SphereGeometry(0.103, 32, 32);
-  const cloudsMaterial = new THREE.MeshBasicMaterial({
-    map: texturesLoader.load(earthClouds),
-    transparent: true,
-  });
-
-  const sunGeometry = new THREE.SphereGeometry(1, 50, 50);
-  const sunMaterial = new THREE.MeshBasicMaterial({
-    map: texturesLoader.load(sunTextures),
-    // side: THREE.DoubleSide,
-  });
-
-  const moonGeometry = new THREE.SphereGeometry(0.05, 30, 30);
-  const moonMaterial = new THREE.MeshPhongMaterial({
-    map: texturesLoader.load(moonTextures),
-    bumpMap: texturesLoader.load(moonCrators),
-    shininess: 40,
-    bumpScale: 0.002,
-  })
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  const earthVector = new THREE.Vector3(0.5, 1, 0);
+  const cloudVector = new THREE.Vector3(0.5, 1, -0.5);
+  const sunVector = new THREE.Vector3(0, 0.3, 0);
+  const rotationSpeed = 0.01;
+  const starsTimeLine = new TimelineMax({ yoyo: true });
+  const planetsTimeLine = new TimelineMax();
   
-  const sun = createMesh(sunGeometry, sunMaterial);
-  const earth = createMesh(earthGeometry, earthMaterial);
-  const stars = createMesh(starsGeometry, starsMaterial);
-  const clouds = createMesh(cloudsGeometry, cloudsMaterial);
-  const moon = createMesh(moonGeometry, moonMaterial);
+  const sun = createSun();
+  const earth = createEarth();
+  const stars = createStars();
+  const clouds = createClouds();
+  const moon = createMoon();
 
   const setOrbitControls = () => {
     const controls = new OrbitControls( camera, renderer.domElement );
@@ -69,9 +37,30 @@ const SolarSystem = () => {
   }
 
   const init = () => {
-    camera.position.z = 7;
-    sun.position.x = 0;
-    light.position.x = 0;
+    camera.position.set(0, 2, 7);
+    light.intensity = 0;
+    sun.scale.set(0, 0, 0);
+
+    starsTimeLine.add(
+      TweenMax.to(stars.rotation, 10, {
+        y: 1,
+        z: 3,
+        ease: 'sine.out'
+      }),
+    );
+
+    planetsTimeLine.add(
+      TweenMax.to(light, 5, {
+        intensity: 1,
+        ease: 'power1.out',
+      })
+    );
+    planetsTimeLine.add(TweenMax.to(sun.scale, 4, {
+        x: 1,
+        y: 1,
+        z: 1,
+      }), + 1
+    )
 
     // scene.add(ambLight);
     scene.add(light);
@@ -84,27 +73,55 @@ const SolarSystem = () => {
 
     renderer.setSize( window.innerWidth, window.innerHeight );
     document.body.appendChild(renderer.domElement);
+    document.body.style.overflow = 'hidden';
     setOrbitControls();
+    document.addEventListener('mousedown', mouseClick);
+    window.addEventListener('resize', windowResize, false);
   };
 
   const animate = () => {
-    earth.rotateOnAxis(new THREE.Vector3(0.5, 1, 0).normalize(), 0.01);
-    clouds.rotateOnAxis(new THREE.Vector3(0.5, 1, -0.5).normalize(), 0.02);
-    // moon.rotateOnAxis(new THREE.Vector3(0.5, 0, 0).normalize(), 0.005);
-    sun.rotateOnAxis(new THREE.Vector3(0, 0.3, -0.5).normalize(), 0.01);
+    earth.rotateOnAxis(earthVector.normalize(), rotationSpeed);
+    clouds.rotateOnAxis(cloudVector.normalize(), rotationSpeed * 2);
+    sun.rotateOnAxis(sunVector.normalize(), rotationSpeed);
+    
+    earthAngle += rotationSpeed * (Math.PI / 3);
+    moonAngle += rotationSpeed * (Math.PI / 0.8);
 
-    earthAngle += 0.015 * (75 * (Math.PI / 360));
-    moonAngle += 0.04 * (75 * (Math.PI / 360));
-
-    earthOrbit.position.x = Math.sin(earthAngle) * 2;
-    earthOrbit.position.z = Math.cos(earthAngle) * 2;
-    moon.position.y = Math.cos(moonAngle) * 0.3;
-    moon.position.z = Math.sin(moonAngle) * 0.3;
+    earthOrbit.position.set(Math.sin(earthAngle) * 3, 0, Math.cos(earthAngle) * 2);
+    moon.position.set(Math.sin(moonAngle) * 0.3, 0, Math.cos(moonAngle) * 0.3);
 
     moon.lookAt(earthOrbit.position);
 
     requestAnimationFrame( animate );
     renderer.render( scene, camera );
+  };
+
+  const mouseClick = (e) => {
+    e.preventDefault();
+    mouse.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
+    raycaster.setFromCamera(mouse, camera);
+    const sunObj = raycaster.intersectObject(sun);
+    const starsObj = raycaster.intersectObject(stars);
+    console.log(stars);
+    if(starsObj.length) {
+      reverse = !reverse;
+      reverse ? starsTimeLine.play() : starsTimeLine.reverse();
+    };
+    
+    if (sunObj.length) {
+      display = !display;
+      display ? scene.add(sun) : scene.remove(sun);
+      display ? removeLights(ambLight, light, scene) : removeLights(light, ambLight, scene);
+    }
+    
+    renderer.render(scene, camera);
+  };
+
+  const windowResize = () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    
+    renderer.setSize(window.innerWidth, window.innerHeight);
   };
 
   init();
