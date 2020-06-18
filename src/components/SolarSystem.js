@@ -14,16 +14,18 @@ const SolarSystem = () => {
   const light = new THREE.PointLight(0xffffff, 1);
   const ambLight = new THREE.AmbientLight(0x333333);
   const earthOrbit = new THREE.Object3D();
+  const zeroValue = 0;
   let earthAngle = 0;
   let moonAngle = 0;
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
-  const earthVector = new THREE.Vector3(0.5, 1, 0);
+  const earthVector = new THREE.Vector3(0.5, 1, zeroValue);
   const cloudVector = new THREE.Vector3(0.5, 1, -0.5);
-  const sunVector = new THREE.Vector3(0, 0.3, 0);
+  const sunVector = new THREE.Vector3(zeroValue, 0.3, zeroValue);
   const rotationSpeed = 0.01;
   const starsTimeLine = new TimelineMax({ yoyo: true });
   const planetsTimeLine = new TimelineMax();
+  
   
   const sun = createSun();
   const earth = createEarth();
@@ -37,9 +39,11 @@ const SolarSystem = () => {
   }
 
   const init = () => {
-    camera.position.set(0, 2, 7);
-    light.intensity = 0;
-    sun.scale.set(0, 0, 0);
+    camera.position.set(zeroValue, 2, 7);
+    light.intensity = zeroValue;
+    sun.scale.set(zeroValue);
+    earthOrbit.scale.set(zeroValue);
+    moon.scale.set(zeroValue);
 
     starsTimeLine.add(
       TweenMax.to(stars.rotation, 10, {
@@ -55,13 +59,31 @@ const SolarSystem = () => {
         ease: 'power1.out',
       })
     );
-    planetsTimeLine.add(TweenMax.to(sun.scale, 4, {
+    planetsTimeLine.add(
+      TweenMax.to(sun.scale, 4, {
         x: 1,
         y: 1,
         z: 1,
+        ease: 'power2.in',
       }), + 1
-    )
-
+    );
+    planetsTimeLine.add(
+      TweenMax.to(earthOrbit.scale, 5, {
+        x: 1,
+        y: 1,
+        z: 1,
+        ease: 'power3.out'
+      }), + 5
+    );
+    planetsTimeLine.add(
+      TweenMax.to(moon.scale, 5, {
+        x: 1,
+        y: 1,
+        z: 1,
+        ease: 'power4.inOut'
+      }), + 7
+    );
+    
     // scene.add(ambLight);
     scene.add(light);
     scene.add(stars);
@@ -102,7 +124,7 @@ const SolarSystem = () => {
     raycaster.setFromCamera(mouse, camera);
     const sunObj = raycaster.intersectObject(sun);
     const starsObj = raycaster.intersectObject(stars);
-    console.log(stars);
+    
     if(starsObj.length) {
       reverse = !reverse;
       reverse ? starsTimeLine.play() : starsTimeLine.reverse();
